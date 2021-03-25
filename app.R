@@ -114,6 +114,9 @@ if (interactive()) {
     df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y')
     df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
     df$Buchungstag = format(df$Buchungstag, '%d.%m.%y')
+    df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
+                                Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
+                                Auslagenersatz.Ruecklastschrift, Info))
     return (df);
   }
   
@@ -157,6 +160,12 @@ if (interactive()) {
       options(digits=6)
       vals = as.double(gsub(",", ".",my_df$Betrag))
       return(paste("Einnahmen: ", sum(vals), "€" )) 
+    })
+    
+    output$monthly_avergae = renderUI({
+      my_df = dfR()
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      
     })
     
   }
