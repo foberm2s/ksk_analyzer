@@ -93,8 +93,8 @@ if (interactive()) {
       # Main panel for displaying outputs ----
       mainPanel(
         # Output: Data file ----
-        uiOutput("ausgaben"),
-        uiOutput("einnahmen"),
+        h3(htmlOutput("ausgaben")),
+        h3(htmlOutput("einnahmen")),
         tableOutput("contents")
         
       )
@@ -140,7 +140,7 @@ if (interactive()) {
       }
     })
     
-    output$ausgaben = renderUI({
+    output$ausgaben = renderText({
       
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
@@ -148,18 +148,19 @@ if (interactive()) {
       my_df = subset(my_df, grepl('-', Betrag))
       options(digits=6)
       vals = as.double(gsub(",", ".",substring(my_df$Betrag, 2)))
-      return(paste("Ausgaben: ", -1*sum(vals), "€" )) 
+      paste("<font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", sum(vals), "€</b>")
+      
       
     })
     
-    output$einnahmen = renderUI({
+    output$einnahmen = renderText({
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
       
       my_df = subset(my_df, !grepl('-', Betrag))
       options(digits=6)
       vals = as.double(gsub(",", ".",my_df$Betrag))
-      return(paste("Einnahmen: ", sum(vals), "€" )) 
+      paste("<font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", sum(vals), "€</b>")
     })
     
     output$monthly_avergae = renderUI({
