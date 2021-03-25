@@ -58,9 +58,9 @@ if (interactive()) {
         dateRangeInput(
           "dateRange",
           "Date range",
-          start = "2019-03-01",
+          start = "2018-03-01",
           end = "2021-03-31",
-          min = "2019-03-01",
+          min = "2018-03-01",
           max = "2021-03-31",
           format = "yyyy-mm-dd",
           startview = "month",
@@ -93,7 +93,8 @@ if (interactive()) {
       # Main panel for displaying outputs ----
       mainPanel(
         # Output: Data file ----
-        textOutput("ausgaben"),
+        uiOutput("ausgaben"),
+        uiOutput("einnahmen"),
         tableOutput("contents")
         
       )
@@ -101,35 +102,33 @@ if (interactive()) {
     )
   )
   
+  calcDf = function(df, beneficiary, subject, dateRange){
+    if(beneficiary != ""){
+      
+      df = subset(df, grepl(tolower(beneficiary), tolower(Beguenstigter.Zahlungspflichtiger)) )
+    }
+    if(subject != ""){
+      df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)) )
+    }
+    dates = as.Date(dateRange, '%d.%m.%y')
+    df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y')
+    df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
+    df$Buchungstag = format(df$Buchungstag, '%d.%m.%y')
+    return (df);
+  }
+  
   # Define server logic to read selected file ----
   server <- function(input, output) {
-    my_df = 0
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
                                                 header = input$header,
                                                 sep = input$sep,
                                                 quote = input$quote)})
     
     output$contents <- renderTable({
-      
-      # input$file1 will be NULL initially. After the user selects
-      # and uploads a file, head of that data file by default,
-      # or all rows if selected, will be shown.
-      
+
       req(input$file1)
       df = dfR()
-      
-      if(input$beneficiary != ""){
-        
-        df = subset(df, grepl(tolower(input$beneficiary), tolower(Beguenstigter.Zahlungspflichtiger)) )
-      }
-      if(input$subject != ""){
-        
-        df = subset(df, grepl(tolower(input$subject), tolower(Verwendungszweck)) )
-      }
-      dates = as.Date(input$dateRange, '%d.%m.%y')
-      df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y')
-      df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
-      df$Buchungstag = format(df$Buchungstag, '%d.%m.%y')
+      df = calcDf(df, input$beneficiary, input$subject, input$dateRange);
       if(input$disp == "head") {
         return(head(df))
       }
@@ -138,20 +137,29 @@ if (interactive()) {
       }
     })
     
-    output$ausgaben = renderText({
-      # das hier reagiert noch nicht auf die Anpassungen in den Panels
+    output$ausgaben = renderUI({
+      
       my_df = dfR()
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      
       my_df = subset(my_df, grepl('-', Betrag))
       options(digits=6)
       vals = as.double(gsub(",", ".",substring(my_df$Betrag, 2)))
-      return(-1*sum(vals))
+      return(paste("Ausgaben: ", -1*sum(vals), "€" )) 
       
     })
     
+    output$einnahmen = renderUI({
+      my_df = dfR()
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      
+      my_df = subset(my_df, !grepl('-', Betrag))
+      options(digits=6)
+      vals = as.double(gsub(",", ".",my_df$Betrag))
+      return(paste("Einnahmen: ", sum(vals), "€" )) 
+    })
+    
   }
-  
-  
-  
   
   
   # Run the app ----
