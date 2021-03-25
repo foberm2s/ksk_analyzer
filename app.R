@@ -1,6 +1,6 @@
 library(shiny)
 library(magrittr)
-
+library(lubridate)
 
 if (interactive()) {
   
@@ -95,6 +95,7 @@ if (interactive()) {
         # Output: Data file ----
         h3(htmlOutput("ausgaben")),
         h3(htmlOutput("einnahmen")),
+        htmlOutput("monthly_avg"),
         tableOutput("contents")
         
       )
@@ -118,6 +119,21 @@ if (interactive()) {
                                 Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
                                 Auslagenersatz.Ruecklastschrift, Info))
     return (df);
+  }
+  
+  getExpenses = function(df){
+    my_df = subset(df, grepl('-', Betrag))
+    options(digits=6)
+    vals = as.double(gsub(",", ".",substring(my_df$Betrag, 2)))
+    return (sum(vals));
+    
+  }
+  
+  getIncome = function(my_df){
+    my_df = subset(my_df, !grepl('-', Betrag))
+    options(digits=6)
+    vals = as.double(gsub(",", ".",my_df$Betrag))
+    return (sum(vals))
   }
   
   # Define server logic to read selected file ----
@@ -144,11 +160,8 @@ if (interactive()) {
       
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
-      
-      my_df = subset(my_df, grepl('-', Betrag))
-      options(digits=6)
-      vals = as.double(gsub(",", ".",substring(my_df$Betrag, 2)))
-      paste("<font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", sum(vals), "€</b>")
+      expenses = getExpenses(my_df);
+      paste("<font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", expenses, "€</b>")
       
       
     })
@@ -156,16 +169,21 @@ if (interactive()) {
     output$einnahmen = renderText({
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
-      
-      my_df = subset(my_df, !grepl('-', Betrag))
-      options(digits=6)
-      vals = as.double(gsub(",", ".",my_df$Betrag))
-      paste("<font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", sum(vals), "€</b>")
+      income = getIncome(my_df)
+      paste("<font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", income, "€</b>")
     })
     
-    output$monthly_avergae = renderUI({
+    output$monthly_avg = renderUI({
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      # calculate sum of expenses and income
+      expenses = getExpenses(my_df);
+      income = getIncome(my_df);
+      # calculate amount of months in daterange 
+      return(interval(input$dateRange[1], input$dateRange[2]) %/% months(1))    # Apply interval & months
+      
+      # divide sum of expenses/ income with amount of months
+      
       
     })
     
