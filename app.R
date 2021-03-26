@@ -8,7 +8,7 @@ if (interactive()) {
   ui <- fluidPage(
     
     # App title ----
-    titlePanel("Uploading Files"),
+    titlePanel("Analysetool für Sparkassen-Bankdaten"),
     
     # Sidebar layout with input and output definitions ----
     sidebarLayout(
@@ -99,6 +99,7 @@ if (interactive()) {
         
       )
       
+      
     )
   )
   
@@ -175,7 +176,7 @@ if (interactive()) {
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
       expenses = getExpenses(my_df);
-      paste("<h3><font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
+      paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
       
       
     })
@@ -184,7 +185,7 @@ if (interactive()) {
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
       income = getIncome(my_df)
-      paste("<h3><font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
+      paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
     })
 
     

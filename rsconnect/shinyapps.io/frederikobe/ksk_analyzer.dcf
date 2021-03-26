@@ -1,0 +1,12 @@
+name: ksk_analyzer
+title: ksk_analyzer
+username:
+account: frederikobe
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3866767
+bundleId: 4398538
+url: https://frederikobe.shinyapps.io/ksk_analyzer/
+when: 1616773930.95101
+asMultiple: FALSE
+asStatic: FALSE
