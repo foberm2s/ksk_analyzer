@@ -93,9 +93,8 @@ if (interactive()) {
       # Main panel for displaying outputs ----
       mainPanel(
         # Output: Data file ----
-        h3(htmlOutput("ausgaben")),
-        h3(htmlOutput("einnahmen")),
-        htmlOutput("monthly_avg"),
+        htmlOutput("ausgaben"),
+        htmlOutput("einnahmen"),
         tableOutput("contents")
         
       )
@@ -136,6 +135,21 @@ if (interactive()) {
     return (sum(vals))
   }
   
+  getAvgPerMonth = function(df, expOrInc, dateRange){
+    days = (interval(dateRange[1], dateRange[2]) %/% days(1))    # Apply interval & months
+    if (expOrInc == "expenses"){
+      expenses = getExpenses(df);
+      tmp = expenses/days*30;
+      return(if (expenses > tmp) tmp else expenses);
+    } else if (expOrInc == "income"){
+      income = getIncome(df);
+      tmp = income/days*30;
+      return(if (income > tmp) tmp else income);
+    } else {
+      return ;
+    }
+  }
+  
   # Define server logic to read selected file ----
   server <- function(input, output) {
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
@@ -161,7 +175,7 @@ if (interactive()) {
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
       expenses = getExpenses(my_df);
-      paste("<font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", expenses, "€</b>")
+      paste("<h3><font color=\"red\"><b>", "Ausgaben: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
       
       
     })
@@ -170,26 +184,16 @@ if (interactive()) {
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
       income = getIncome(my_df)
-      paste("<font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", income, "€</b>")
+      paste("<h3><font color=\"green\"><b>", "Einnahmen: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
     })
+
     
-    output$monthly_avg = renderUI({
-      my_df = dfR()
-      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
-      # calculate sum of expenses and income
-      expenses = getExpenses(my_df);
-      income = getIncome(my_df);
-      # calculate amount of months in daterange 
-      return(interval(input$dateRange[1], input$dateRange[2]) %/% months(1))    # Apply interval & months
-      
-      # divide sum of expenses/ income with amount of months
-      
-      
-    })
+
+    }
     
   }
   
   
   # Run the app ----
   shinyApp(ui, server)
-}
+
