@@ -1,8 +1,7 @@
-library(shiny)
+#library(shiny)
 library(magrittr)
 library(lubridate)
 
-if (interactive()) {
   
   # Define UI for data upload app ----
   ui <- fluidPage(
@@ -111,8 +110,8 @@ if (interactive()) {
     if(subject != ""){
       df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)) )
     }
-    dates = as.Date(dateRange, '%d.%m.%y')
-    df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y')
+    dates = base::as.Date(dateRange, '%d.%m.%y')
+    df$Buchungstag = base::as.Date(df$Buchungstag, '%d.%m.%y')
     df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
     df$Buchungstag = format(df$Buchungstag, '%d.%m.%y')
     df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
@@ -137,7 +136,7 @@ if (interactive()) {
   }
   
   getAvgPerMonth = function(df, expOrInc, dateRange){
-    days = (interval(dateRange[1], dateRange[2]) %/% days(1))    # Apply interval & months
+    days = lubridate::interval(dateRange[1], dateRange[2]) %/% days(1)    # Apply interval & days
     if (expOrInc == "expenses"){
       expenses = getExpenses(df);
       tmp = expenses/days*30;
@@ -192,7 +191,6 @@ if (interactive()) {
 
     }
     
-  }
   
   
   # Run the app ----
