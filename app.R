@@ -7,7 +7,7 @@ library(lubridate)
   ui <- fluidPage(
     
     # App title ----
-    titlePanel("Analysetool für Sparkassen-Bankdaten"),
+    titlePanel("Analysetool für Bankingdaten"),
     
     # Sidebar layout with input and output definitions ----
     sidebarLayout(
@@ -15,8 +15,13 @@ library(lubridate)
       # Sidebar panel for inputs ----
       sidebarPanel(
         
+        # Input: Select bank ----
+        radioButtons("bank", "1. Choose your Bank",
+                     choices = c(Sparkasse = "ksk",
+                                 N26 = "n26")
+        ),
         # Input: Select a file ----
-        fileInput("file1", "Choose CSV File",
+        fileInput("file1","2. Choose CSV File",
                   multiple = TRUE,
                   accept = c("text/csv",
                              "text/comma-separated-values,text/plain",
@@ -25,24 +30,7 @@ library(lubridate)
         # Horizontal line ----
         tags$hr(),
         
-        # Input: Checkbox if file has header ----
-        checkboxInput("header", "Header", TRUE)
-        
-        ,
-        
-        # Input: Select separator ----
-        radioButtons("sep", "Separator",
-                     choices = c(Semicolon = ";",
-                                 Comma = ",",
-                                 Tab = "\t"),
-                     selected = ";"),
-        
-        # Input: Select quotes ----
-        radioButtons("quote", "Quote",
-                     choices = c(None = "",
-                                 "Double Quote" = '"',
-                                 "Single Quote" = "'"),
-                     selected = '"'),
+
         
         # Horizontal line ----
         tags$hr(),
@@ -102,22 +90,35 @@ library(lubridate)
     )
   )
   
-  calcDf = function(df, beneficiary, subject, dateRange){
+  calcDf = function(df, beneficiary, subject, dateRange, bank){
+    df = determineBankColumns(df, bank);
     if(beneficiary != ""){
-      
       df = subset(df, grepl(tolower(beneficiary), tolower(Beguenstigter.Zahlungspflichtiger)) )
     }
     if(subject != ""){
       df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)) )
     }
+    
     dates = base::as.Date(dateRange, '%d.%m.%y')
-    df$Buchungstag = base::as.Date(df$Buchungstag, '%d.%m.%y')
+    df$Buchungstag = base::as.Date(df$Buchungstag);
     df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
-    df$Buchungstag = format(df$Buchungstag, '%d.%m.%y')
-    df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
-                                Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
-                                Auslagenersatz.Ruecklastschrift, Info))
+    df$Buchungstag = format(df$Buchungstag, '%d.%m.%y');
     return (df);
+  }
+  
+  
+  determineBankColumns = function(df, bank){
+    if (bank == "n26"){
+      colnames(df) = c("Buchungstag", "Beguenstigter.Zahlungspflichtiger", "Kontonummer", "Transaktionstyp", "Verwendungszweck", "Kategorie", "Betrag", "Betrag (F)", "Fremdwaehrung", "Wechselkurs");
+      return(df);
+    } else if (bank == "ksk") {
+      df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
+                                  Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
+                                  Auslagenersatz.Ruecklastschrift, Info))
+      return(df);
+    } else {
+      return (NaN);
+    }
   }
   
   getExpenses = function(df){
@@ -152,16 +153,17 @@ library(lubridate)
   
   # Define server logic to read selected file ----
   server <- function(input, output) {
+    
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
-                                                header = input$header,
-                                                sep = input$sep,
-                                                quote = input$quote)})
+                                                header = TRUE,
+                                                sep = if(input$bank == "ksk") ";" else ",",
+                                                quote = '"')})
     
     output$contents <- renderTable({
 
       req(input$file1)
       df = dfR()
-      df = calcDf(df, input$beneficiary, input$subject, input$dateRange);
+      df = calcDf(df, input$beneficiary, input$subject, input$dateRange, input$bank);
       if(input$disp == "head") {
         return(head(df))
       }
@@ -169,11 +171,12 @@ library(lubridate)
         return(df)
       }
     })
+
     
     output$ausgaben = renderText({
       
       my_df = dfR()
-      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank);
       expenses = getExpenses(my_df);
       paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
       
@@ -182,7 +185,7 @@ library(lubridate)
     
     output$einnahmen = renderText({
       my_df = dfR()
-      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange);
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank);
       income = getIncome(my_df)
       paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
     })
