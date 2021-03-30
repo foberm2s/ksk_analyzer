@@ -99,8 +99,13 @@ library(lubridate)
       df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)) )
     }
     
-    dates = base::as.Date(dateRange, '%d.%m.%y')
-    df$Buchungstag = base::as.Date(df$Buchungstag);
+    dates = as.Date(dateRange, '%d.%m.%y')
+    if (bank == "ksk"){
+      df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y');
+      
+    } else {
+      df$Buchungstag = as.Date(df$Buchungstag);
+    }
     df = subset(df, Buchungstag >= dates[1] & Buchungstag <= dates[2])
     df$Buchungstag = format(df$Buchungstag, '%d.%m.%y');
     return (df);
@@ -137,14 +142,22 @@ library(lubridate)
   }
   
   getAvgPerMonth = function(df, expOrInc, dateRange){
-    days = lubridate::interval(dateRange[1], dateRange[2]) %/% days(1)    # Apply interval & days
+    # get first date in available data
+    firstDate = as.Date(df$Buchungstag[1], "%d.%m.%y");
+    # get last date in available data 
+    lastDate = as.Date(df$Buchungstag[length(df$Buchungstag)], "%d.%m.%y");
+    # calculate amount of days in between
+    days = lubridate::interval(firstDate, lastDate) %/% days(1)    # Apply interval & days
+    if (days < 0){
+      days = days*-1;
+    }
     if (expOrInc == "expenses"){
       expenses = getExpenses(df);
-      tmp = expenses/days*30;
+      tmp = (expenses/days)*30;
       return(if (expenses > tmp) tmp else expenses);
     } else if (expOrInc == "income"){
       income = getIncome(df);
-      tmp = income/days*30;
+      tmp = (income/days)*30;
       return(if (income > tmp) tmp else income);
     } else {
       return ;
