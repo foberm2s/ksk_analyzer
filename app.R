@@ -66,6 +66,9 @@ library(lubridate)
           width = NULL,
           placeholder = NULL
         ),
+        # Input: EXCLUDE for beneficiary
+        checkboxInput("exclBen", "Exclude", value = FALSE, width = NULL),
+        
         # Input: Enter a subject
         textInput(
           "subject",
@@ -74,6 +77,8 @@ library(lubridate)
           width = NULL,
           placeholder = NULL
         ),
+        # Input: EXCLUDE for subject
+        checkboxInput("exclSub", "Exclude", value = FALSE, width = NULL),
         
       ),
       
@@ -90,15 +95,16 @@ library(lubridate)
     )
   )
   
-  calcDf = function(df, beneficiary, subject, dateRange, bank){
+  calcDf = function(df, beneficiary, subject, dateRange, bank, exclBen, exclSub){
     df = determineBankColumns(df, bank);
     if(beneficiary != ""){
-      df = subset(df, grepl(tolower(beneficiary), tolower(Beguenstigter.Zahlungspflichtiger)) )
+      exclude = exclBen;
+      if(exclude) df = subset(df, !grepl(tolower(beneficiary), tolower(Beguenstigter.Zahlungspflichtiger))) else df = subset(df, grepl(tolower(beneficiary), tolower(Beguenstigter.Zahlungspflichtiger)))
     }
     if(subject != ""){
-      df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)) )
+      exclude = exclSub;
+      if(exclude)df = subset(df, !grepl(tolower(subject), tolower(Verwendungszweck))) else df = subset(df, grepl(tolower(subject), tolower(Verwendungszweck)))
     }
-    
     dates = as.Date(dateRange, '%d.%m.%y')
     if (bank == "ksk"){
       df$Buchungstag = as.Date(df$Buchungstag, '%d.%m.%y');
@@ -178,17 +184,15 @@ library(lubridate)
   
   # Define server logic to read selected file ----
   server <- function(input, output) {
-    
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
                                                 header = TRUE,
                                                 sep = if(input$bank == "ksk") ";" else ",",
                                                 quote = '"')})
     
     output$contents <- renderTable({
-
       req(input$file1)
       df = dfR()
-      df = calcDf(df, input$beneficiary, input$subject, input$dateRange, input$bank);
+      df = calcDf(df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       if(input$disp == "head") {
         return(head(df))
       }
@@ -201,7 +205,7 @@ library(lubridate)
     output$ausgaben = renderText({
       
       my_df = dfR()
-      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank);
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       expenses = getExpenses(my_df);
       paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
       
@@ -210,7 +214,7 @@ library(lubridate)
     
     output$einnahmen = renderText({
       my_df = dfR()
-      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank);
+      my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       income = getIncome(my_df)
       paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
     })
