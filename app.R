@@ -1,7 +1,7 @@
 #library(shiny)
 library(magrittr)
 library(lubridate)
-
+library(ggplot2)
   
   # Define UI for data upload app ----
   ui <- fluidPage(
@@ -84,13 +84,11 @@ library(lubridate)
       
       # Main panel for displaying outputs ----
       mainPanel(
-        # Output: Data file ----
-        htmlOutput("ausgaben"),
-        htmlOutput("einnahmen"),
-        tableOutput("contents")
-        
+        tabsetPanel(type="tabs", tabPanel("Overview", htmlOutput("ausgaben"), htmlOutput("einnahmen")),
+                    tabPanel("Positions", tableOutput("contents"))
+  
       )
-      
+      )
       
     )
   )
@@ -120,12 +118,13 @@ library(lubridate)
   
   determineBankColumns = function(df, bank){
     if (bank == "n26"){
-      colnames(df) = c("Buchungstag", "Beguenstigter.Zahlungspflichtiger", "Kontonummer", "Transaktionstyp", "Verwendungszweck", "Kategorie", "Betrag", "Betrag (F)", "Fremdwaehrung", "Wechselkurs");
+      colnames(df) = c("Buchungstag", "Beguenstigter.Zahlungspflichtiger", "Kontonummer", "Transaktionstyp", "Verwendungszweck", "Kategorie", "Betrag", "Betrag_F", "Fremdwaehrung", "Wechselkurs");
+      df = subset(df, select = -c(Betrag_F, Fremdwaehrung, Kategorie, Wechselkurs, Transaktionstyp));
       return(df);
     } else if (bank == "ksk") {
       df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
                                   Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
-                                  Auslagenersatz.Ruecklastschrift, Info))
+                                  Auslagenersatz.Ruecklastschrift, Info, BIC..SWIFT.Code., Buchungstext, Waehrung))
       return(df);
     } else {
       return (NaN);
@@ -192,9 +191,22 @@ library(lubridate)
       options(digits=6)
       vals = as.double(gsub(",", ".",my_df$Betrag))
     }
-    print(vals);
     return(max(vals));
     
+  }
+  
+  getMeanPosition = function(df, expOrInc){
+    if (expOrInc == "expenses"){
+      my_df = subset(df, grepl('-', Betrag))
+      options(digits=6)
+      vals = as.double(gsub(",", ".", substring(my_df$Betrag, 2)))
+    } else{
+      my_df = subset(df, !grepl('-', Betrag))
+      options(digits=6)
+      vals = as.double(gsub(",", ".",my_df$Betrag))
+    }
+    xmean = round(mean(vals), 2);
+    return(xmean);
   }
   
   # Define server logic to read selected file ----
@@ -223,7 +235,11 @@ library(lubridate)
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       expenses = getExpenses(my_df);
       max = getHighestPosition(my_df, "expenses");
-      paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4><h4>", "Largest Expense: ", max, "€</h4")
+      paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>",
+            expenses, "€</b></h3> <h4>Monthly avg: ",
+            round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2),
+            "€</h4><h4>", "Largest Expense: ", max, "€</h4>",
+            "<h4>Average: ", getMeanPosition(my_df, "expenses"), "€</h4>")
       
       
     })
@@ -234,8 +250,13 @@ library(lubridate)
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       income = getIncome(my_df)
       max = getHighestPosition(my_df, "income");
-      paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4><h4>", "Biggest income: ", max, "€</h4>")
+      paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>",
+            income, "€</b></h3> <h4>Monthly avg: ", 
+            round(getAvgPerMonth(my_df, "income", input$dateRange), 2), 
+            "€</h4><h4>", "Biggest income: ", max, "€</h4>",
+            "<h4>Average: ", getMeanPosition(my_df, "income"), "€</h4>")
     })
+    
 
     
 
