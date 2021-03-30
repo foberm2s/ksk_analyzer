@@ -146,6 +146,18 @@ library(lubridate)
     firstDate = as.Date(df$Buchungstag[1], "%d.%m.%y");
     # get last date in available data 
     lastDate = as.Date(df$Buchungstag[length(df$Buchungstag)], "%d.%m.%y");
+    # get DateRange days to check if the given daterange is more specific than underlying data
+    if (firstDate > lastDate){
+      tmp = lastDate;
+      lastDate = firstDate;
+      firstDate = tmp;
+    }
+    if (dateRange[1] > firstDate){
+      firstDate = dateRange[1];
+    }
+    if (lastDate > dateRange[2]){
+      lastDate = dateRange[2];
+    }
     # calculate amount of days in between
     days = lubridate::interval(firstDate, lastDate) %/% days(1)    # Apply interval & days
     if (days < 0){
