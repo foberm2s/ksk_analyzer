@@ -182,6 +182,21 @@ library(lubridate)
     }
   }
   
+  getHighestPosition = function(df, expOrInc){
+    if (expOrInc == "expenses"){
+      my_df = subset(df, grepl('-', Betrag))
+      options(digits=6)
+      vals = as.double(gsub(",", ".",substring(my_df$Betrag, 2)))
+    } else {
+      my_df = subset(df, !grepl('-', Betrag))
+      options(digits=6)
+      vals = as.double(gsub(",", ".",my_df$Betrag))
+    }
+    print(vals);
+    return(max(vals));
+    
+  }
+  
   # Define server logic to read selected file ----
   server <- function(input, output) {
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
@@ -207,16 +222,19 @@ library(lubridate)
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       expenses = getExpenses(my_df);
-      paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4>")
+      max = getHighestPosition(my_df, "expenses");
+      paste("<h3><font color=\"red\"><b>", "Expenses: ", "</b></font><b>", expenses, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "expenses", input$dateRange), 2), "€</h4><h4>", "Largest Expense: ", max, "€</h4")
       
       
     })
+
     
     output$einnahmen = renderText({
       my_df = dfR()
       my_df = calcDf(my_df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
       income = getIncome(my_df)
-      paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4>")
+      max = getHighestPosition(my_df, "income");
+      paste("<h3><font color=\"green\"><b>", "Income: ", "</b></font><b>", income, "€</b></h3> <h4>Monthly avg: ", round(getAvgPerMonth(my_df, "income", input$dateRange), 2), "€</h4><h4>", "Biggest income: ", max, "€</h4>")
     })
 
     
