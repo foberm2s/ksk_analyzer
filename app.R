@@ -18,7 +18,7 @@ library(ggplot2)
         # Input: Select bank ----
         radioButtons("bank", "1. Choose your Bank",
                      choices = c(Sparkasse = "ksk",
-                                 N26 = "n26")
+                                 N26 = "n26", bunq="bunq", VR="vr")
         ),
         # Input: Select a file ----
         fileInput("file1","2. Choose CSV File",
@@ -35,11 +35,6 @@ library(ggplot2)
         # Horizontal line ----
         tags$hr(),
         
-        # Input: Select number of rows to display ----
-        radioButtons("disp", "Display",
-                     choices = c(Head = "head",
-                                 All = "all"),
-                     selected = "head"),
         
         # Input: Date Range
         dateRangeInput(
@@ -92,7 +87,7 @@ library(ggplot2)
       
     )
   )
-  
+  mySep = ";";
   calcDf = function(df, beneficiary, subject, dateRange, bank, exclBen, exclSub){
     df = determineBankColumns(df, bank);
     if(beneficiary != ""){
@@ -120,14 +115,19 @@ library(ggplot2)
     if (bank == "n26"){
       colnames(df) = c("Buchungstag", "Beguenstigter.Zahlungspflichtiger", "Kontonummer", "Transaktionstyp", "Verwendungszweck", "Kategorie", "Betrag", "Betrag_F", "Fremdwaehrung", "Wechselkurs");
       df = subset(df, select = -c(Betrag_F, Fremdwaehrung, Kategorie, Wechselkurs, Transaktionstyp));
+      mySep = ",";
       return(df);
     } else if (bank == "ksk") {
       df = subset(df, select = -c(Auftragskonto, Valutadatum, Glaeubiger.ID, Mandatsreferenz, 
                                   Kundenreferenz..End.to.End., Sammlerreferenz, Lastschrift.Ursprungsbetrag,
                                   Auslagenersatz.Ruecklastschrift, Info, BIC..SWIFT.Code., Buchungstext, Waehrung))
       return(df);
-    } else {
-      return (NaN);
+    } else if (bank == "bunq") {
+      colnames(df) = c("Buchungstag", "Date", "Betrag", "Kontonummer", "Counterparty", "Beguenstigter.Zahlungspflichtiger", "Verwendungszweck");
+      df = subset(df, select = -c(Counterparty, Kontonummer, Date));
+      return(df);
+    } else if (bank =="vr"){
+      # vr kram
     }
   }
   
@@ -213,19 +213,15 @@ library(ggplot2)
   server <- function(input, output) {
     dfR <- eventReactive(input$file1, {read.csv(input$file1$datapath,
                                                 header = TRUE,
-                                                sep = if(input$bank == "ksk") ";" else ",",
+                                                sep = mySep,
                                                 quote = '"')})
     
     output$contents <- renderTable({
       req(input$file1)
       df = dfR()
       df = calcDf(df, input$beneficiary, input$subject, input$dateRange, input$bank, input$exclBen, input$exclSub);
-      if(input$disp == "head") {
-        return(head(df))
-      }
-      else {
-        return(df)
-      }
+      return(df);
+
     })
 
     
